@@ -64,6 +64,30 @@ def saveCentralities(centralities)->None:
 
     wb.save("centralities.xlsx")
 
+def determineOptimalPath(graph, startNode: str, nodes: list)->list:
+    if startNode not in nodes:
+        return [] #ensure startNode is part of nodes list
+
+    currentNode = startNode
+    nodes.pop(nodes.index(startNode)) #remove starting node from list
+
+    path = [startNode]
+
+    while len(nodes) > 0:
+        shortest = ("", 9999)
+        for x in nodes: #find nearest neighbor from currentNode
+            length = nx.shortest_path_length(graph, currentNode, x, "weight")
+            if length < shortest[1]:
+                shortest = (x, length)
+        nodes.pop(nodes.index(shortest[0]))
+
+        add = nx.shortest_path(graph, currentNode, shortest[0], "weight")
+        add.pop(0)
+
+        path = path + add
+        currentNode = shortest[0]
+
+    return path
 
 def main():
     graph = nx.Graph()
@@ -75,9 +99,10 @@ def main():
     positions = nx.nx_agraph.graphviz_layout(graph, prog="neato")
     elabels = nx.get_edge_attributes(graph,'weight')
 
-    print(nx.shortest_path_length(graph, "SEC-A", "Bellarmine", 'weight'))
-    print(nx.shortest_path(graph, "SEC-A", "Bellarmine", "weight"))
-    print(nx.approximation.traveling_salesman_problem(graph, weight='weight'))
+    test = ["Faura", "Berchman", "SEC-A", "Bellarmine"]
+    print(determineOptimalPath(graph, "Faura", test))
+
+    #print(nx.approximation.traveling_salesman_problem(graph, weight='weight'))
 
     '''centralities = getCentralities(graph)
     saveCentralities(centralities)''' #need only to run once
@@ -85,7 +110,7 @@ def main():
     plt.figure(1,figsize=(16,9)) #16:9 ratio
 
     nx.draw(graph, with_labels=True, node_size=4000, font_size="11", pos=positions)
-    #nx.draw_networkx_edge_labels(graph,positions,edge_labels=elabels, font_size="7")
+    nx.draw_networkx_edge_labels(graph,positions,edge_labels=elabels, font_size="9")
     plt.show()
 
 if __name__ == '__main__':

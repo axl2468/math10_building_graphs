@@ -32,3 +32,4 @@ JGSOM/CTC:SEC-C:140
 JGSOM/CTC:Schmitt:190
 JGSOM/CTC:Faura:250
 JGSOM/CTC:Gonzaga:220
+Gonzaga:Kostka:120
