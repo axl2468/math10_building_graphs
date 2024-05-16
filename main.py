@@ -1,5 +1,9 @@
+from openpyxl import Workbook
+
 import networkx as nx
 import matplotlib.pyplot as plt
+import numpy as np
+import math
 
 def generateRelationships(filename: str) -> str:
     edges = []
@@ -20,10 +24,10 @@ def generateRelationships(filename: str) -> str:
 def getCentralities(graph) -> dict:
     nodes = list(graph.nodes)
 
-    #setup centralities dictionary
+    
     centralities = {}
 
-    for x in nodes:
+    for x in nodes: #setup centralities dictionary
         centralities[x] = {"degree":0, "closeness":0, "betweenness":0}
 
     deg_centrality = nx.degree_centrality(graph)
@@ -41,24 +45,48 @@ def getCentralities(graph) -> dict:
 
     return centralities
 
+def saveCentralities(centralities)->None:
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Centralities"
+
+    ws.cell(row=1, column=1, value="Building")
+    ws.cell(row=1, column=2, value="Degree")
+    ws.cell(row=1, column=3, value="Closeness")
+    ws.cell(row=1, column=4, value="Betweenness")
+    index = 2
+    for x in list(centralities.keys()):
+        ws.cell(row=index, column=1, value=x)
+        ws.cell(row=index, column=2, value=centralities[x]['degree'])
+        ws.cell(row=index, column=3, value=centralities[x]['closeness'])
+        ws.cell(row=index, column=4, value=centralities[x]['betweenness'])
+        index += 1
+
+    wb.save("centralities.xlsx")
+
+
 def main():
     graph = nx.Graph()
 
     edges = generateRelationships("relationships.txt")
 
-    #print(edges)
     graph.add_edges_from(edges)
-    positions = nx.spring_layout(graph)
+    #positions = nx.spring_layout(graph, k=5/math.sqrt(graph.order()))
+    positions = nx.nx_agraph.graphviz_layout(graph, prog="neato")
     elabels = nx.get_edge_attributes(graph,'weight')
 
-    print(getCentralities(graph))
+    print(nx.shortest_path_length(graph, "SEC-A", "Bellarmine", 'weight'))
+    print(nx.shortest_path(graph, "SEC-A", "Bellarmine", "weight"))
+    print(nx.approximation.traveling_salesman_problem(graph, weight='weight'))
 
-    nx.draw(graph, with_labels=True, node_size=1750, font_size="7", pos=positions)
-    nx.draw_networkx_edge_labels(graph,positions,edge_labels=elabels)
+    '''centralities = getCentralities(graph)
+    saveCentralities(centralities)''' #need only to run once
+
+    plt.figure(1,figsize=(16,9)) #16:9 ratio
+
+    nx.draw(graph, with_labels=True, node_size=4000, font_size="11", pos=positions)
+    #nx.draw_networkx_edge_labels(graph,positions,edge_labels=elabels, font_size="7")
     plt.show()
-
-    
-
 
 if __name__ == '__main__':
     main()
