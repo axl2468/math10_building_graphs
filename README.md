@@ -7,6 +7,7 @@ For use in the Math 10 (Mathematics in the Modern World) final project.
 ## Requirements
 1. Python 3
 2. graphviz
+3. NetworkX
 
 ## Steps
 1. Navigate to your directory of choice then clone the repository:
