@@ -1,11 +1,15 @@
 from openpyxl import Workbook
 
+import copy
 import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
 import math
 
 def generateRelationships(filename: str) -> str:
+    '''
+    Reads from the relationships.txt file to create an edge list.
+    '''
     edges = []
 
     with open(filename, "r") as file:
@@ -21,7 +25,11 @@ def generateRelationships(filename: str) -> str:
     
     return edges
 
-def getCentralities(graph) -> dict:
+def getCentralities(graph: nx.Graph) -> dict:
+    '''
+    Gets the centrality values of all nodes. Returns a dictionary with the nodes as keys.
+    '''
+
     nodes = list(graph.nodes)
 
     
@@ -45,7 +53,7 @@ def getCentralities(graph) -> dict:
 
     return centralities
 
-def saveCentralities(centralities)->None:
+def saveCentralities(centralities: dict) -> None:
     wb = Workbook()
     ws = wb.active
     ws.title = "Centralities"
@@ -64,10 +72,15 @@ def saveCentralities(centralities)->None:
 
     wb.save("centralities.xlsx")
 
-def determineOptimalPath(graph, startNode: str, nodes: list)->list:
-    if startNode not in nodes:
+def determineOptimalPath(graph: nx.Graph, startNode: str, nodeList: list) -> list:
+    '''
+    Greedy pathfinding algorithm, always chooses the nearest neighbor when building the path (starting from startNode).
+    '''
+    if startNode not in nodeList:
         return [] #ensure startNode is part of nodes list
 
+    #create copy because python lists are weird and always do it by reference
+    nodes = copy.deepcopy(nodeList)
     currentNode = startNode
     nodes.pop(nodes.index(startNode)) #remove starting node from list
 
@@ -89,6 +102,53 @@ def determineOptimalPath(graph, startNode: str, nodes: list)->list:
 
     return path
 
+def determinePath(graph: nx.Graph, nodeList:list) -> list:
+    '''
+    Generates the shortest path for the specified node order.
+    '''
+
+    nodes = copy.deepcopy(nodeList)
+
+    currentNode = nodes[0]
+    path = [nodes[0]]
+
+    nodes.pop(0)
+
+    for x in nodes:
+        add = nx.shortest_path(graph, currentNode, x, "weight")
+        add.pop(0)
+
+        path = path+add
+        currentNode = x
+    
+    return path
+
+    
+
+def getPathLength(graph: nx.Graph, nodes: list) -> int:
+    '''
+    Gets the length of a path.
+    '''
+    total = 0
+    for x in range(len(nodes)-1):
+        total += graph[nodes[x]][nodes[x+1]]["weight"]
+    
+    return total
+
+def generatePathGraph(graph: nx.Graph, nodes: list) -> nx.Graph:
+    '''
+    Given a valid path, generates a directed graph.
+    '''
+    g = nx.DiGraph()
+    edges = []
+
+    for x in range(len(nodes)-1):
+        edges.append((nodes[x], nodes[x+1], {"weight": graph[nodes[x]][nodes[x+1]]["weight"]}))
+    
+    g.add_edges_from(edges)
+
+    return g
+
 def main():
     graph = nx.Graph()
 
@@ -99,19 +159,39 @@ def main():
     positions = nx.nx_agraph.graphviz_layout(graph, prog="neato")
     elabels = nx.get_edge_attributes(graph,'weight')
 
-    test = ["Faura", "Berchman", "SEC-A", "Bellarmine"]
-    print(determineOptimalPath(graph, "Faura", test))
+    #Determining optimal path from schedule
+    sched = ["Faura", "Berchman", "SEC-A", "Bellarmine"]
+    origsched = determinePath(graph, sched)
+    optimalsched = determineOptimalPath(graph, "Faura", sched)
+    print("Original path:")
+    print(origsched, "of", getPathLength(graph, origsched), "metres")
+    print("Optimal path for Monday schedule:")
+    print(optimalsched, "of", getPathLength(graph, optimalsched), "metres")
 
-    #print(nx.approximation.traveling_salesman_problem(graph, weight='weight'))
+    print("")
+    
+    hamiltonian = nx.approximation.traveling_salesman_problem(graph, weight='weight') #this uses the Christofides algorithm by default
+    print("Hamiltonian path for all buildings:", hamiltonian, "of")
+    print(getPathLength(graph, hamiltonian), "metres")
 
+    pathGraph = generatePathGraph(graph, hamiltonian)
+
+    #generates centralities.xlsx, optional
     '''centralities = getCentralities(graph)
-    saveCentralities(centralities)''' #need only to run once
+    saveCentralities(centralities)''' 
 
     plt.figure(1,figsize=(16,9)) #16:9 ratio
 
-    nx.draw(graph, with_labels=True, node_size=4000, font_size="11", pos=positions)
-    nx.draw_networkx_edge_labels(graph,positions,edge_labels=elabels, font_size="9")
+    #change comment statuses for different graphs
+    nx.draw(graph, with_labels=True, node_size=10000, font_size="15", pos=positions, font_weight='bold', width=2)
+    #nx.draw_networkx_edge_labels(graph,positions,edge_labels=elabels, font_size="9") #if edge labels are needed
+    
+    #nx.draw(pathGraph, with_labels=True, node_size=12000, font_size="20", pos=positions, width=5)
+    
     plt.show()
+
+    #save edgelist, optional
+    #nx.write_edgelist(graph, "finalgraph.csv")
 
 if __name__ == '__main__':
     main()
